@@ -77,7 +77,6 @@ aws-s3-guardian/
 │   ├── eventbridge.tf          # Event rule + Lambda trigger
 │   ├── cloudwatch.tf           # Dashboard + alarm + metric filter
 │   └── outputs.tf              # Output values
-└── ROADMAP.md                  # Build roadmap
 ```
 
 ## Deployment
