@@ -17,8 +17,8 @@ terraform/lambda_function.zip
 __pycache__/
 *.pyc
 
-# Lambda zip
-lambda/*.zip
+# Lambda zips
+*.zip
 
 # Environment
 .env

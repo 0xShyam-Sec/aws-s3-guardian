@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS S3 Guardian - Security Dashboard</title>
+    <style>
+        /* ============================================
+           DESIGN SYSTEM
+           ============================================ */
+        :root {
+            /* Surface layers (darkest to lightest) */
+            --surface-0: #080c14;
+            --surface-1: #0d1320;
+            --surface-2: #131b2e;
+            --surface-3: #1a2440;
+            --surface-4: #223052;
+
+            /* Borders */
+            --border-subtle: rgba(148, 163, 184, 0.06);
+            --border-default: rgba(148, 163, 184, 0.1);
+            --border-strong: rgba(148, 163, 184, 0.16);
+
+            /* Text */
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-faint: #475569;
+
+            /* Severity palette */
+            --critical-bg: rgba(239, 68, 68, 0.12);
+            --critical-border: rgba(239, 68, 68, 0.25);
+            --critical-text: #fca5a5;
+            --critical-accent: #ef4444;
+            --critical-glow: rgba(239, 68, 68, 0.06);
+
+            --high-bg: rgba(249, 115, 22, 0.12);
+            --high-border: rgba(249, 115, 22, 0.25);
+            --high-text: #fdba74;
+            --high-accent: #f97316;
+
+            --medium-bg: rgba(234, 179, 8, 0.10);
+            --medium-border: rgba(234, 179, 8, 0.20);
+            --medium-text: #fde047;
+            --medium-accent: #eab308;
+
+            --low-bg: rgba(34, 197, 94, 0.10);
+            --low-border: rgba(34, 197, 94, 0.20);
+            --low-text: #86efac;
+            --low-accent: #22c55e;
+
+            /* Category palette */
+            --cat-s3: #3b82f6;
+            --cat-iam: #a78bfa;
+            --cat-network: #22d3ee;
+            --cat-cloudtrail: #f87171;
+            --cat-unknown: #64748b;
+
+            /* Status */
+            --status-success: #22c55e;
+            --status-na: #64748b;
+            --status-failed: #ef4444;
+
+            /* Accent */
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+
+            /* Spacing scale */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 20px;
+            --space-2xl: 24px;
+            --space-3xl: 32px;
+            --space-4xl: 40px;
+
+            /* Typography */
+            --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+            --text-xs: 11px;
+            --text-sm: 12px;
+            --text-base: 13px;
+            --text-md: 14px;
+            --text-lg: 16px;
+            --text-xl: 20px;
+            --text-2xl: 28px;
+            --text-3xl: 36px;
+
+            /* Radius */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+        }
+
+        /* ============================================
+           RESET & BASE
+           ============================================ */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--surface-0);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: var(--text-base);
+            line-height: 1.5;
+        }
+
+        /* ============================================
+           HEADER
+           ============================================ */
+        .header {
+            background: var(--surface-1);
+            border-bottom: 1px solid var(--border-default);
+            padding: var(--space-lg) var(--space-4xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            background: rgba(13, 19, 32, 0.85);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: var(--text-md);
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.3px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: var(--space-lg);
+            align-items: center;
+        }
+
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+            border-radius: 100px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--low-accent);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+            animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+            50% { opacity: 0.6; box-shadow: 0 0 4px rgba(34, 197, 94, 0.3); }
+        }
+
+        .refresh-btn {
+            padding: 7px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-strong);
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            font-family: var(--font-sans);
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--surface-3);
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* ============================================
+           CONTAINER
+           ============================================ */
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: var(--space-3xl) var(--space-4xl);
+        }
+
+        /* ============================================
+           STAT CARDS
+           ============================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-lg);
+            margin-bottom: var(--space-3xl);
+        }
+
+        .stat-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2xl);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-strong);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .stat-card.total::before { background: linear-gradient(90deg, var(--accent), transparent); }
+        .stat-card.critical::before { background: linear-gradient(90deg, var(--critical-accent), transparent); }
+        .stat-card.high::before { background: linear-gradient(90deg, var(--high-accent), transparent); }
+        .stat-card.medium::before { background: linear-gradient(90deg, var(--medium-accent), transparent); }
+
+        .stat-card.critical {
+            background: linear-gradient(180deg, var(--critical-glow), var(--surface-1));
+        }
+
+        .stat-card .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-md);
+        }
+
+        .stat-card .label {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .stat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-md);
+        }
+
+        .stat-card.total .stat-icon { background: rgba(59, 130, 246, 0.12); color: var(--accent); }
+        .stat-card.critical .stat-icon { background: var(--critical-bg); color: var(--critical-accent); }
+        .stat-card.high .stat-icon { background: var(--high-bg); color: var(--high-accent); }
+        .stat-card.medium .stat-icon { background: var(--medium-bg); color: var(--medium-accent); }
+
+        .stat-card .value {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            letter-spacing: -1px;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .stat-card.total .value { color: var(--text-primary); }
+        .stat-card.critical .value { color: var(--critical-text); }
+        .stat-card.high .value { color: var(--high-text); }
+        .stat-card.medium .value { color: var(--medium-text); }
+
+        /* ============================================
+           SECTION GRID (Charts)
+           ============================================ */
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-3xl);
+        }
+
+        .chart-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2xl);
+            transition: border-color 0.2s ease;
+        }
+
+        .chart-card:hover {
+            border-color: var(--border-strong);
+        }
+
+        .chart-card h3 {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            margin-bottom: var(--space-xl);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+        }
+
+        .bar-label {
+            font-size: var(--text-base);
+            color: var(--text-secondary);
+            min-width: 180px;
+            font-weight: 450;
+        }
+
+        .bar-container {
+            flex: 1;
+            background: var(--surface-3);
+            border-radius: 100px;
+            height: 24px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            color: white;
+            transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            min-width: 28px;
+        }
+
+        .bar-fill.s3 { background: linear-gradient(90deg, rgba(59, 130, 246, 0.7), var(--cat-s3)); }
+        .bar-fill.iam { background: linear-gradient(90deg, rgba(167, 139, 250, 0.7), var(--cat-iam)); }
+        .bar-fill.network { background: linear-gradient(90deg, rgba(34, 211, 238, 0.7), var(--cat-network)); }
+        .bar-fill.cloudtrail { background: linear-gradient(90deg, rgba(248, 113, 113, 0.7), var(--cat-cloudtrail)); }
+        .bar-fill.unknown { background: linear-gradient(90deg, rgba(100, 116, 139, 0.7), var(--cat-unknown)); }
+        .bar-fill.success { background: linear-gradient(90deg, rgba(34, 197, 94, 0.7), var(--status-success)); }
+        .bar-fill.na { background: linear-gradient(90deg, rgba(100, 116, 139, 0.5), var(--status-na)); }
+        .bar-fill.failed { background: linear-gradient(90deg, rgba(239, 68, 68, 0.7), var(--status-failed)); }
+        .bar-fill.remediated { background: linear-gradient(90deg, rgba(34, 197, 94, 0.7), var(--status-success)); }
+
+        .bar-value {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            min-width: 28px;
+            text-align: right;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ============================================
+           FILTERS
+           ============================================ */
+        .filters-section {
+            margin-bottom: var(--space-lg);
+        }
+
+        .filters-label {
+            font-size: var(--text-xs);
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+
+        .filters {
+            display: flex;
+            gap: var(--space-sm);
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 14px;
+            border-radius: 100px;
+            border: 1px solid var(--border-default);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            font-family: var(--font-sans);
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .filter-btn:hover {
+            background: var(--surface-3);
+            color: var(--text-secondary);
+            border-color: var(--border-strong);
+        }
+
+        .filter-btn.active {
+            background: rgba(59, 130, 246, 0.12);
+            color: #93bbfd;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .filter-btn.active:hover {
+            background: rgba(59, 130, 246, 0.18);
+        }
+
+        /* Severity-specific active states */
+        .filter-btn[data-filter="CRITICAL"].active {
+            background: var(--critical-bg);
+            color: var(--critical-text);
+            border-color: var(--critical-border);
+        }
+        .filter-btn[data-filter="HIGH"].active {
+            background: var(--high-bg);
+            color: var(--high-text);
+            border-color: var(--high-border);
+        }
+        .filter-btn[data-filter="MEDIUM"].active {
+            background: var(--medium-bg);
+            color: var(--medium-text);
+            border-color: var(--medium-border);
+        }
+
+        /* ============================================
+           FINDINGS TABLE
+           ============================================ */
+        .findings-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .findings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-xl) var(--space-2xl);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .findings-header h3 {
+            font-size: var(--text-md);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .findings-count {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: var(--space-md) var(--space-2xl);
+            font-size: var(--text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-faint);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-default);
+            background: var(--surface-2);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: var(--space-md) var(--space-2xl);
+            font-size: var(--text-base);
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        tr {
+            transition: background 0.1s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .td-timestamp {
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .td-event {
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .td-category {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .category-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .category-dot.s3 { background: var(--cat-s3); }
+        .category-dot.iam { background: var(--cat-iam); }
+        .category-dot.network { background: var(--cat-network); }
+        .category-dot.cloudtrail { background: var(--cat-cloudtrail); }
+        .category-dot.unknown { background: var(--cat-unknown); }
+
+        .td-ip {
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+        }
+
+        .td-resource {
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Severity badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .badge.critical {
+            background: var(--critical-bg);
+            color: var(--critical-text);
+            border: 1px solid var(--critical-border);
+        }
+        .badge.critical .badge-dot { background: var(--critical-accent); }
+
+        .badge.high {
+            background: var(--high-bg);
+            color: var(--high-text);
+            border: 1px solid var(--high-border);
+        }
+        .badge.high .badge-dot { background: var(--high-accent); }
+
+        .badge.medium {
+            background: var(--medium-bg);
+            color: var(--medium-text);
+            border: 1px solid var(--medium-border);
+        }
+        .badge.medium .badge-dot { background: var(--medium-accent); }
+
+        .badge.low {
+            background: var(--low-bg);
+            color: var(--low-text);
+            border: 1px solid var(--low-border);
+        }
+        .badge.low .badge-dot { background: var(--low-accent); }
+
+        /* Status pills */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .status-pill.success {
+            background: rgba(34, 197, 94, 0.10);
+            color: var(--low-text);
+            border: 1px solid rgba(34, 197, 94, 0.20);
+        }
+
+        .status-pill.na {
+            background: rgba(100, 116, 139, 0.08);
+            color: var(--text-muted);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+        }
+
+        .status-pill.failed {
+            background: var(--critical-bg);
+            color: var(--critical-text);
+            border: 1px solid var(--critical-border);
+        }
+
+        /* ============================================
+           STATES
+           ============================================ */
+        .loading {
+            text-align: center;
+            padding: 60px var(--space-2xl);
+            color: var(--text-muted);
+            font-size: var(--text-md);
+        }
+
+        .loading::before {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-strong);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto var(--space-lg);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            padding: var(--space-4xl);
+            color: var(--critical-text);
+            font-size: var(--text-md);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--space-4xl);
+            color: var(--text-muted);
+            font-size: var(--text-md);
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .section-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: var(--space-xl); }
+            .header { padding: var(--space-md) var(--space-xl); }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+            .stat-card { padding: var(--space-lg); }
+            .stat-card .value { font-size: var(--text-2xl); }
+            th, td { padding: var(--space-sm) var(--space-md); font-size: var(--text-sm); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-logo">G</div>
+            <h1>AWS S3 Guardian</h1>
+        </div>
+        <div class="header-right">
+            <button class="refresh-btn" onclick="loadData()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                Refresh
+            </button>
+            <div class="status">
+                <div class="status-dot"></div>
+                <span>Monitoring Active</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Summary Cards -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-header">
+                    <span class="label">Total Findings</span>
+                    <div class="stat-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                    </div>
+                </div>
+                <div class="value" id="total-count">-</div>
+            </div>
+            <div class="stat-card critical">
+                <div class="stat-header">
+                    <span class="label">Critical</span>
+                    <div class="stat-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                    </div>
+                </div>
+                <div class="value" id="critical-count">-</div>
+            </div>
+            <div class="stat-card high">
+                <div class="stat-header">
+                    <span class="label">High</span>
+                    <div class="stat-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                </div>
+                <div class="value" id="high-count">-</div>
+            </div>
+            <div class="stat-card medium">
+                <div class="stat-header">
+                    <span class="label">Medium</span>
+                    <div class="stat-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    </div>
+                </div>
+                <div class="value" id="medium-count">-</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="section-grid">
+            <div class="chart-card">
+                <h3>Findings by Category</h3>
+                <div class="bar-chart" id="category-chart"></div>
+            </div>
+            <div class="chart-card">
+                <h3>Remediation Status</h3>
+                <div class="bar-chart" id="status-chart"></div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <div class="filters-label">Filter by</div>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="ALL" onclick="filterFindings('ALL', this)">All</button>
+                <button class="filter-btn" data-filter="CRITICAL" onclick="filterFindings('CRITICAL', this)">Critical</button>
+                <button class="filter-btn" data-filter="HIGH" onclick="filterFindings('HIGH', this)">High</button>
+                <button class="filter-btn" data-filter="MEDIUM" onclick="filterFindings('MEDIUM', this)">Medium</button>
+                <button class="filter-btn" data-filter="S3_PUBLIC_ACCESS" onclick="filterFindings('S3_PUBLIC_ACCESS', this)">S3</button>
+                <button class="filter-btn" data-filter="IAM_CHANGE" onclick="filterFindings('IAM_CHANGE', this)">IAM</button>
+                <button class="filter-btn" data-filter="NETWORK_CHANGE" onclick="filterFindings('NETWORK_CHANGE', this)">Network</button>
+                <button class="filter-btn" data-filter="CLOUDTRAIL_TAMPERING" onclick="filterFindings('CLOUDTRAIL_TAMPERING', this)">CloudTrail</button>
+            </div>
+        </div>
+
+        <!-- Findings Table -->
+        <div class="findings-card">
+            <div class="findings-header">
+                <h3>Security Findings</h3>
+                <span class="findings-count" id="findings-count"></span>
+            </div>
+            <div id="table-container">
+                <div class="loading">Loading findings...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://42k63jmxze.execute-api.us-east-1.amazonaws.com/prod';
+        let allFindings = [];
+
+        async function loadData() {
+            try {
+                const [statsRes, findingsRes] = await Promise.all([
+                    fetch(API_BASE + '/stats'),
+                    fetch(API_BASE + '/findings')
+                ]);
+
+                const statsRaw = await statsRes.json();
+                const findingsRaw = await findingsRes.json();
+
+                const stats = statsRaw.body ? JSON.parse(statsRaw.body) : statsRaw;
+                const findings = findingsRaw.body ? JSON.parse(findingsRaw.body) : findingsRaw;
+
+                allFindings = findings.findings || [];
+                renderStats(stats);
+                renderCategoryChart(stats.byCategory || {});
+                renderStatusChart(stats.byStatus || {});
+                renderTable(allFindings);
+            } catch (err) {
+                document.getElementById('table-container').innerHTML =
+                    '<div class="error">Failed to load data. Check API connection.</div>';
+            }
+        }
+
+        function renderStats(stats) {
+            var sev = stats.bySeverity || {};
+            document.getElementById('total-count').textContent = stats.totalFindings || 0;
+            document.getElementById('critical-count').textContent = sev.CRITICAL || 0;
+            document.getElementById('high-count').textContent = sev.HIGH || 0;
+            document.getElementById('medium-count').textContent = sev.MEDIUM || 0;
+        }
+
+        function renderCategoryChart(categories) {
+            var container = document.getElementById('category-chart');
+            var total = Object.values(categories).reduce(function(a, b) { return a + b; }, 0) || 1;
+            var classMap = {
+                'S3_PUBLIC_ACCESS': 's3',
+                'IAM_CHANGE': 'iam',
+                'NETWORK_CHANGE': 'network',
+                'CLOUDTRAIL_TAMPERING': 'cloudtrail',
+                'UNKNOWN': 'unknown'
+            };
+            var nameMap = {
+                'S3_PUBLIC_ACCESS': 'S3 Public Access',
+                'IAM_CHANGE': 'IAM Changes',
+                'NETWORK_CHANGE': 'Network Changes',
+                'CLOUDTRAIL_TAMPERING': 'CloudTrail Tampering',
+                'UNKNOWN': 'Unknown'
+            };
+
+            var sorted = Object.entries(categories).sort(function(a, b) { return b[1] - a[1]; });
+
+            container.innerHTML = sorted.map(function(entry) {
+                var key = entry[0];
+                var val = entry[1];
+                var pct = Math.max((val / total) * 100, 6);
+                var cls = classMap[key] || 'unknown';
+                var name = nameMap[key] || key;
+                return '<div class="bar-row">' +
+                    '<span class="bar-label">' + name + '</span>' +
+                    '<div class="bar-container">' +
+                    '<div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div>' +
+                    '</div>' +
+                    '<span class="bar-value">' + val + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function renderStatusChart(statuses) {
+            var container = document.getElementById('status-chart');
+            var total = Object.values(statuses).reduce(function(a, b) { return a + b; }, 0) || 1;
+            var classMap = { 'SUCCESS': 'success', 'N/A': 'na', 'REMEDIATED': 'remediated' };
+            var nameMap = { 'SUCCESS': 'Auto-Remediated', 'N/A': 'Alert Only', 'REMEDIATED': 'Remediated' };
+
+            var sorted = Object.entries(statuses).sort(function(a, b) { return b[1] - a[1]; });
+
+            container.innerHTML = sorted.map(function(entry) {
+                var key = entry[0];
+                var val = entry[1];
+                var pct = Math.max((val / total) * 100, 6);
+                var cls = classMap[key] || 'failed';
+                var name = nameMap[key] || key;
+                if (key.indexOf('FAILED') === 0) { cls = 'failed'; name = 'Failed'; }
+                return '<div class="bar-row">' +
+                    '<span class="bar-label">' + name + '</span>' +
+                    '<div class="bar-container">' +
+                    '<div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div>' +
+                    '</div>' +
+                    '<span class="bar-value">' + val + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function filterFindings(filter, btn) {
+            document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+
+            var filtered = allFindings;
+            if (filter !== 'ALL') {
+                filtered = allFindings.filter(function(f) {
+                    return f.severity === filter || f.category === filter;
+                });
+            }
+            renderTable(filtered);
+        }
+
+        function getCategoryClass(category) {
+            var map = {
+                'S3_PUBLIC_ACCESS': 's3',
+                'IAM_CHANGE': 'iam',
+                'NETWORK_CHANGE': 'network',
+                'CLOUDTRAIL_TAMPERING': 'cloudtrail'
+            };
+            return map[category] || 'unknown';
+        }
+
+        function getCategoryName(category) {
+            var map = {
+                'S3_PUBLIC_ACCESS': 'S3',
+                'IAM_CHANGE': 'IAM',
+                'NETWORK_CHANGE': 'Network',
+                'CLOUDTRAIL_TAMPERING': 'CloudTrail'
+            };
+            return map[category] || category || '-';
+        }
+
+        function formatTimestamp(ts) {
+            if (!ts || ts === '-' || ts === 'Unknown') return '-';
+            try {
+                var d = new Date(ts);
+                var month = String(d.getMonth() + 1).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                var hours = String(d.getHours()).padStart(2, '0');
+                var mins = String(d.getMinutes()).padStart(2, '0');
+                return d.getFullYear() + '-' + month + '-' + day + ' ' + hours + ':' + mins;
+            } catch (e) {
+                return ts;
+            }
+        }
+
+        function renderTable(findings) {
+            document.getElementById('findings-count').textContent = findings.length + ' finding' + (findings.length !== 1 ? 's' : '');
+
+            if (!findings.length) {
+                document.getElementById('table-container').innerHTML =
+                    '<div class="empty-state">No findings match the current filter.</div>';
+                return;
+            }
+
+            var html = '<table><thead><tr>' +
+                '<th>Time</th><th>Category</th><th>Event</th>' +
+                '<th>Severity</th><th>Resource</th><th>Source IP</th><th>Status</th>' +
+                '</tr></thead><tbody>';
+
+            findings.forEach(function(f) {
+                var sevClass = (f.severity || '').toLowerCase();
+                var catClass = getCategoryClass(f.category);
+                var catName = getCategoryName(f.category);
+
+                var statusClass = 'na';
+                var statusText = 'Alert Only';
+                if (f.status === 'SUCCESS' || f.status === 'REMEDIATED') {
+                    statusClass = 'success';
+                    statusText = 'Auto-Fixed';
+                } else if (f.status && f.status.indexOf('FAILED') === 0) {
+                    statusClass = 'failed';
+                    statusText = 'Failed';
+                }
+
+                html += '<tr>' +
+                    '<td class="td-timestamp">' + formatTimestamp(f.timestamp) + '</td>' +
+                    '<td><div class="td-category"><span class="category-dot ' + catClass + '"></span>' + catName + '</div></td>' +
+                    '<td class="td-event">' + (f.eventName || '-') + '</td>' +
+                    '<td><span class="badge ' + sevClass + '"><span class="badge-dot"></span>' + (f.severity || '-') + '</span></td>' +
+                    '<td class="td-resource">' + (f.bucket || '-') + '</td>' +
+                    '<td class="td-ip">' + (f.sourceIP || '-') + '</td>' +
+                    '<td><span class="status-pill ' + statusClass + '">' + statusText + '</span></td>' +
+                    '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('table-container').innerHTML = html;
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
