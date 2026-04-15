@@ -21,32 +21,73 @@ Dashboard shows all findings in real-time
 
 ## Architecture
 
-```
-┌──────────┐    ┌────────────┐    ┌──────────────┐    ┌─────────────────────────────────┐
-│  AWS API  │──▶│ CloudTrail │──▶│ EventBridge  │──▶│  Step Functions                  │
-│ Activity  │    │ (logs all  │    │ (4 detection │    │  ┌───────────┐                  │
-│           │    │  actions)  │    │  rules)      │    │  │ Classify  │                  │
-└──────────┘    └────────────┘    └──────────────┘    │  └─────┬─────┘                  │
-                                                       │        ↓                        │
-                                                       │  ┌───────────┐  ┌────────────┐ │
-                                                       │  │ Remediate │  │   Notify   │ │
-                                                       │  │ (auto-fix)│─▶│ (DB+email) │ │
-                                                       │  └───────────┘  └──────┬─────┘ │
-                                                       └────────────────────────┼───────┘
-                                                                                │
-                                                       ┌────────────────────────┼───────┐
-                                                       │            ┌───────────┴──┐    │
-                                                       │  ┌─────┐   │   DynamoDB   │    │
-                                                       │  │ SNS │   │  (findings)  │    │
-                                                       │  │email│   └───────┬──────┘    │
-                                                       │  └─────┘           │           │
-                                                       └────────────────────┼───────────┘
-                                                                            │
-                                                       ┌────────────────────┼───────────┐
-                                                       │  API Gateway ──▶ Lambda (API)  │
-                                                       │         ↓                      │
-                                                       │   S3 Static Dashboard          │
-                                                       └───────────────────────────────┘
+```mermaid
+graph LR
+      subgraph Sources
+          S3
+          IAM
+          Network
+          Trail
+      end
+
+      subgraph Logging
+          CloudTrail
+      end
+
+      subgraph Detection
+          EventBridge
+      end
+
+      subgraph Workflow
+          Classify
+          Decision
+          LiveCheck
+          Remediate
+          Skip
+          Notify
+      end
+
+      subgraph Storage
+          DynamoDB
+          SNS
+      end
+
+      subgraph Dashboard
+          API
+          Lambda
+          Web
+      end
+
+      S3 --> CloudTrail
+      IAM --> CloudTrail
+      Network --> CloudTrail
+      Trail --> CloudTrail
+      CloudTrail --> EventBridge
+      EventBridge --> Classify
+      Classify --> Decision
+      Decision --> LiveCheck
+      Decision --> Skip
+      LiveCheck --> Remediate
+      LiveCheck --> Skip
+      Remediate --> Notify
+      Skip --> Notify
+      Notify --> DynamoDB
+      Notify --> SNS
+      DynamoDB --> Lambda
+      API --> Lambda
+      Lambda --> Web
+
+      style Sources fill:#1e293b,stroke:#3b82f6,color:#e2e8f0
+      style Logging fill:#1e293b,stroke:#22c55e,color:#e2e8f0
+      style Detection fill:#1e293b,stroke:#f97316,color:#e2e8f0
+      style Workflow fill:#2d3a52,stroke:#a78bfa,color:#e2e8f0
+      style Storage fill:#1e293b,stroke:#eab308,color:#e2e8f0
+      style Dashboard fill:#1e293b,stroke:#06b6d4,color:#e2e8f0
+      style Decision fill:#7c3aed,stroke:#a78bfa,color:#ffffff
+      style LiveCheck fill:#0d9488,stroke:#2dd4bf,color:#ffffff
+      style Remediate fill:#dc2626,stroke:#f87171,color:#ffffff
+      style Classify fill:#2563eb,stroke:#60a5fa,color:#ffffff
+      style Notify fill:#ca8a04,stroke:#fde047,color:#ffffff
 ```
 
 ## Threat Detection
