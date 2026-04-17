@@ -161,6 +161,8 @@ A real-time web dashboard shows all security findings at a glance:
 - **Charts** — findings by category, remediation status
 - **Filters** — filter by severity or category
 - **Findings table** — every incident with time, category, event, severity, source IP, and status
+  
+  ![Dashboard](assets/Dashboard.jpg)
 
 ## Sample Alert Email
 
